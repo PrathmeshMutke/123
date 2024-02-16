@@ -1,0 +1,87 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+
+class QLearningAgent:
+    def __init__(self, num_actions, num_features, alpha=0.1, gamma=0.9, epsilon=0.1):
+        self.num_actions = num_actions
+        self.num_features = num_features
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.q_table = {}
+
+    def get_state_key(self, state):
+        return tuple(state)
+
+    def get_action(self, state):
+        state_key = self.get_state_key(state)
+
+        if np.random.rand() < self.epsilon or state_key not in self.q_table:
+            return np.random.randint(self.num_actions)
+        else:
+            return np.argmax(self.q_table[state_key])
+
+    def update_q_value(self, state, action, reward, next_state):
+        state_key = self.get_state_key(state)
+        next_state_key = self.get_state_key(next_state)
+
+        if state_key not in self.q_table:
+            self.q_table[state_key] = np.zeros(self.num_actions)
+
+        if next_state_key not in self.q_table:
+            self.q_table[next_state_key] = np.zeros(self.num_actions)
+
+        self.q_table[state_key][action] += self.alpha * (
+            reward + self.gamma * np.max(self.q_table[next_state_key]) - self.q_table[state_key][action]
+        )
+
+def recommend_order_rl(agent, orders):
+    # Use Q-learning agent to recommend the order
+    state = {
+        "age": 30,
+        "gender": "Male",
+        "order_time": "Lunch",
+        "location": "Urban",
+    }
+    action = agent.get_action(state)
+    recommended_order = orders[action]
+    return recommended_order
+
+def main():
+    st.title("Food Order Recommendation App with Deep RL")
+
+    # Get the number of orders specified by the user
+    num_orders = st.number_input("Enter the number of orders:", min_value=1, step=1)
+
+    # Collect details for each order
+    orders = []
+    for i in range(num_orders):
+        st.subheader(f"Order {i + 1} Details")
+
+        age = st.number_input("Age", min_value=1, step=1, key=f"age_{i}")
+        gender = st.radio("Gender", ["Male", "Female"], key=f"gender_{i}")
+        order_time = st.selectbox("Order Time", ["Breakfast", "Lunch", "Dinner"], key=f"order_time_{i}")
+        location = st.selectbox("Location", ["Urban", "Suburban", "Rural"], key=f"location_{i}")
+
+        order_details = {
+            "age": age,
+            "gender": gender,
+            "order_time": order_time,
+            "location": location,
+        }
+
+        orders.append(order_details)
+
+    # Create a Q-learning agent
+    agent = QLearningAgent(num_actions=num_orders, num_features=len(orders[0]))
+
+    # Recommend which order should be delivered using deep reinforcement learning
+    recommended_order = recommend_order_rl(agent, orders)
+
+    # Display the recommended order
+    st.subheader("Recommended Order to Deliver:")
+    st.write(recommended_order)
+
+if __name__ == "__main__":
+    main()
